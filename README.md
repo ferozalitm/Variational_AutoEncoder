@@ -1,6 +1,31 @@
-Variational Auto-Encoder
+Variational_AutoEncoder_MNIST.py
 
-Dataset: MNIST
+Author: T M Feroz Ali
+
+
+Network architecture:
+
+    Autoencoder and Decoder uses 3 layer n/w.
+    
+    Uses 9 dimensional Latent space.
+    
+    Encoder outputs mean and log of variance.
+    
+    All RelU non-linearity except Sigmoid for output layer
+    
+
+
+Other details:
+
+    Loss: BCELoss(mean over all elements and batchsize)*28*28 + KL_loss_(mean_over_batchSize).
+
+    Analyzes VAE latent space using PCA
+
+    Generates new data(numbers) by sampling the VAE latent space
+
+    Dataset: MNIST
+
+
 
 
 Plot of train and test losses:
