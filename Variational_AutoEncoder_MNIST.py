@@ -1,16 +1,16 @@
-# 1. variational_autoencoder_MNIST_BCE_reductionMean.py
-#     Autoencoder using 3 linear layer, all RelU except last Sigmoid, 9 dimn Latent and BCE on MNIST dataset
-#     #     Loss = BCELoss(mean over all elements and batchsize)*28*28 + KL_loss_(mean_over_batchSize)
+#  Variational_AutoEncoder_MNIST.py
+#     Author: T M Feroz Ali
+#     Network architecture:
+#          Autoencoder and Decoder uses 3 layer n/w.
+#          Uses 9 dimensional Latent space.
+#          Encoder outputs mean and log of variance.
+#          All RelU non-linearity except Sigmoid for output layer
 #
-# 2. variational_autoencoder_MNIST_BCE_reductionMean_GenerateNew.py
-#
-# 3. variational_autoencoder_MNIST_BCE_reductionMean_GenerateNew2.py
-#     Use self.mu ans self.log_sigma instead of mu and log_sigma
-#
-# 4. variational_autoencoder_MNIST_BCE_reductionMean_Generate_LatentPCA.py
-#
-# 5. variational_autoencoder_MNIST_BCE_reductionMean_Generate_LatentPCA_logSigma.py
-#     Use encode logvar instead of var.
+#     Loss = BCELoss(mean over all elements and batchsize)*28*28 + KL_loss_(mean_over_batchSize).
+#     Analyzes VAE latent space using PCA
+#     Generates new data(numbers) by sampling the VAE latent space
+
+
 
 import torch
 import torchvision
@@ -30,12 +30,10 @@ import matplotlib.cm as cm
 no_classes = 10
 colors = cm.rainbow(np.linspace(0, 1, no_classes))
 
-
 # Reproducibility
 torch.manual_seed(0)
 np.random.seed(0)
 random.seed(0)
-
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -105,7 +103,6 @@ class VAE_Net(nn.Module):
         mv_std_Guassian = torch.from_numpy(np.random.multivariate_normal(mean = np.zeros(self.mu.shape[1]), cov = np.diag(np.ones(self.mu.shape[1])), size=self.mu.shape[0])).float().to(device)
         z_sampled = torch.mul(mv_std_Guassian,torch.exp(self.log_sigma)) + self.mu
 
-        # breakpoint()
         # mv_std_Guassian = torch.randn_like(mu)
         # z_sampled = mv_std_Guassian*torch.exp(log_sigma) + mu
 
@@ -138,21 +135,10 @@ def update_lr(optimizer, lr):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def BCElossCustom(x_reconst, images):
-    # Eqn: H(P,Q) = -Sum p*log(x_reconst) = -Sum [images*log(x_reconst) + (1-images)log(1-x_reconst)]
-    clip_array = -100*torch.ones(images.shape).to(device)
-    log_A = torch.max(clip_array, torch.log(x_reconst))
-    log_1_A = torch.max(clip_array, torch.log(1-x_reconst))
-    return -(images*log_A + (1-images)*log_1_A)
-
-lambda_BCEloss = 28*28
-      
+lambda_BCEloss = 28*28      
 
 # Build loss.
-# criterion = nn.BCELoss() # default (reduction='mean')
 criterionM = nn.BCELoss(reduction='mean')  
-# criterionS = nn.BCELoss(reduction='sum')  # default (reduction='mean')
-# criterionN = nn.BCELoss(reduction='none')  # default (reduction='mean')
 
 no_epochs = 150
 first_pass = True
@@ -175,31 +161,16 @@ for epoch in range(no_epochs):
 
     images = images.reshape(-1, 28*28)
     images = images.to(device)
-    # labels = labels.to(device)
 
     # Forward pass.
     x_reconst = model(images)
 
-    # breakpoint()
-
     # Compute loss.
-    # BCElossC1 = BCElossCustom(x_reconst, images)
-    # BCEloss = criterion(x_reconst, images)
     BCElossM = criterionM(x_reconst, images)*lambda_BCEloss
-    # BCElossS = criterionS(x_reconst, images)
-    # BCElossN = criterionN(x_reconst, images)
-    # BCElossF = torch.nn.functional.binary_cross_entropy(x_reconst, images, size_average=False)
-    # breakpoint()
 
     KLloss = -0.5*torch.sum(1+torch.log(torch.square(torch.exp(model.log_sigma)) + 0.000000000000000000000000001) - torch.square(model.mu) - torch.square(torch.exp(model.log_sigma)))
     KLlossN = KLloss/images.shape[0]
     loss = BCElossM + KLlossN
-  
-    # print(f"BCElossS: {BCElossS}")
-    # print(f"BCElossM: {BCElossM}")
-    # print(f"BCElossC1: {BCElossC1}")
-    # print(f"BCElossN: {BCElossN}")
-
 
     if epoch == 0 and first_pass == True:
       print(f'Initial {epoch} total loss {loss.item()}, BCEloss:{BCElossM}, KLloss:{KLlossN}')
@@ -315,7 +286,5 @@ for epoch in range(no_epochs):
     plt.title('PCA latent space')
     plt.show()
     plt.savefig(os.path.join(sample_dir, f'PCA_latentSpace-{epoch}.png'))
-
-
 
   model.train()
